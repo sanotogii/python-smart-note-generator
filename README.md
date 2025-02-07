@@ -19,6 +19,7 @@ Before I started working on this project i installed whisper with the assistance
 [Link](https://www.youtube.com/watch?v=ABFqbY_rmEk).
 
 Generally you would need whisper to be working fine on your machine.
+check out : https://github.com/openai/whisper
 
 ## Installation
 
