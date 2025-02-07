@@ -26,7 +26,7 @@ check out : https://github.com/openai/whisper
 1. Clone the repository:
 ```bash
 git clone <repository-url>
-cd python-transcriber
+cd python-smart-note-generator
 ```
 
 2. Install required packages:
