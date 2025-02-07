@@ -1,0 +1,5 @@
+customtkinter>=5.2.0
+tkinterdnd2>=0.3.0
+openai-whisper
+python-dotenv>=1.0.0
+google-generativeai>=0.3.0
