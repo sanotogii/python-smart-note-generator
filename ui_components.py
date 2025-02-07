@@ -55,7 +55,7 @@ class TranscriberUI:
         
         ctk.CTkLabel(format_frame, text="Output Format:").pack(side="left", padx=10)
         self.format_var = ctk.StringVar(value="srt")
-        formats = ["srt", "txt", "vtt"]
+        formats = ["srt", "txt", "vtt", "json"]
         for fmt in formats:
             ctk.CTkRadioButton(
                 format_frame,
