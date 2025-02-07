@@ -1,4 +1,4 @@
-# Video Transcriber App
+# Video Transcriber & smart notes generator
 
 A Python application that transcribes video files to text, generates subtitles, and creates smart notes using AI.
 
