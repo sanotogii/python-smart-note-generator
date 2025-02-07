@@ -3,6 +3,7 @@ import threading
 import time
 import os
 import re
+import json
 from utils import format_timestamp
 from notes_manager import NotesManager
 
@@ -81,6 +82,8 @@ class TranscriptionManager:
                 self.generate_srt(result, output_path)
             elif self.ui.format_var.get() == "vtt":
                 self.generate_vtt(result, output_path)
+            elif self.ui.format_var.get() == "json":
+                self.generate_json(result, output_path)
             else:
                 self.generate_txt(result, output_path)
             
@@ -144,3 +147,12 @@ class TranscriptionManager:
     def generate_txt(self, result, output_path):
         with open(output_path, 'w', encoding='utf-8') as f:
             f.write(result["text"])
+
+    def generate_json(self, result, output_path):
+        output_data = {
+            'text': result['text'],
+            'segments': result.get('segments', []),
+            'language': result.get('language', 'unknown')
+        }
+        with open(output_path, 'w', encoding='utf-8') as f:
+            json.dump(output_data, f, indent=2, ensure_ascii=False)
