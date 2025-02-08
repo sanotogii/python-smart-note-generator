@@ -18,6 +18,10 @@ The app is not tested yet on Linux/Unix based os.
 Before I started working on this project i installed whisper with the assistance of this Youtube video:
 [Link](https://www.youtube.com/watch?v=ABFqbY_rmEk).
 
+<p align="center">
+  <img src="assets/img.png.png" alt="App Screenshot" width="600">
+</p>
+
 Generally you would need whisper to be working fine on your machine.
 check out : https://github.com/openai/whisper
 
