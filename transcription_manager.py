@@ -4,8 +4,13 @@ import time
 import os
 import re
 import json
+import sys
+import io
+from contextlib import redirect_stdout
 from utils import format_timestamp
 from notes_manager import NotesManager
+from queue import Queue
+from threading import Thread
 
 class TranscriptionManager:
     def __init__(self, ui):
@@ -16,11 +21,51 @@ class TranscriptionManager:
         self.processing_queue = False
         self.transcribing = False
         self.progress_value = 0
+        self.output_queue = Queue()
+        self.start_output_worker()
         try:
             self.notes_manager = NotesManager()
         except Exception as e:
             print(f"Warning: Could not initialize NotesManager: {e}")
             self.notes_manager = None
+
+    def start_output_worker(self):
+        """Start a worker thread to process output queue"""
+        def worker():
+            while True:
+                text = self.output_queue.get()
+                if text == "STOP":
+                    break
+                self.ui.update_output(text)
+                self.output_queue.task_done()
+
+        self.output_thread = Thread(target=worker, daemon=True)
+        self.output_thread.start()
+
+    def custom_stdout_redirect(self):
+        """Custom stdout redirect that updates UI in real-time"""
+        class CustomStdout:
+            def __init__(self, queue):
+                self.queue = queue
+                self.buffer = ""
+
+            def write(self, text):
+                self.buffer += text
+                if '\n' in self.buffer:
+                    lines = self.buffer.split('\n')
+                    for line in lines[:-1]:
+                        if line.strip():
+                            self.queue.put(line)
+                    self.buffer = lines[-1]
+                sys.__stdout__.write(text)
+
+            def flush(self):
+                if self.buffer:
+                    self.queue.put(self.buffer)
+                    self.buffer = ""
+                sys.__stdout__.flush()
+
+        return CustomStdout(self.output_queue)
 
     def on_model_change(self, new_model):
         if new_model != self.model_name:
@@ -68,13 +113,24 @@ class TranscriptionManager:
         base_name = os.path.basename(file_path)
         self.ui.update_status(f"Transcribing: {base_name}")
         self.ui.update_transcription_state("processing")
-        
-        self.progress_value = 0
         self.transcribing = True
-        self.start_progress_update()
         
         try:
-            result = self.model.transcribe(file_path)
+            # Redirect stdout to our custom handler
+            custom_stdout = self.custom_stdout_redirect()
+            old_stdout = sys.stdout
+            sys.stdout = custom_stdout
+
+            try:
+                result = self.model.transcribe(
+                    file_path, 
+                    verbose=True,
+                )
+            finally:
+                # Restore stdout
+                sys.stdout = old_stdout
+                custom_stdout.flush()
+            
             output_path = self.get_output_path(file_path)
             
             # Generate transcription in selected format
@@ -90,41 +146,27 @@ class TranscriptionManager:
             self.ui.update_transcription_state("completed")
             
             # Generate notes from transcription
-            self.ui.update_status(f"Generating notes for: {base_name}")
-            self.ui.update_notes_state("processing")
+            if self.notes_manager:
+                self.ui.update_status(f"Generating notes for: {base_name}")
+                self.ui.update_notes_state("processing")
+                base_name_without_ext = os.path.splitext(base_name)[0]
+                notes_path = self.notes_manager.generate_notes(result["text"], base_name_without_ext)
+                self.ui.update_notes_state("completed")
+                self.ui.update_status(f"Completed: {base_name}\nNotes saved to: {notes_path}")
             
-            base_name_without_ext = os.path.splitext(base_name)[0]
-            notes_path = self.notes_manager.generate_notes(result["text"], base_name_without_ext)
-            
-            self.ui.update_notes_state("completed")
-            self.ui.update_status(f"Completed: {base_name}\nNotes saved to: {notes_path}")
         except Exception as e:
             self.ui.update_transcription_state("error")
             self.ui.update_notes_state("error")
             self.ui.update_status(f"Error with {base_name}: {str(e)}")
+            self.ui.update_output(f"Error: {str(e)}")
         finally:
             self.transcribing = False
-
-    def start_progress_update(self):
-        def update():
-            if self.transcribing:
-                if self.progress_value < 99:
-                    self.progress_value += 3
-                    if self.progress_value > 99:
-                        self.progress_value = 99
-                self.ui.update_progress(self.progress_value)
-                self.ui.window.after(300, update)
-            else:
-                self.progress_value = 100
-                self.ui.update_progress(100)
-        
-        self.ui.window.after(100, update)
 
     def get_output_path(self, input_file):
         format_ext = self.ui.format_var.get()
         base_filename = os.path.splitext(os.path.basename(input_file))[0] + f'.{format_ext}'
         output_dir = self.ui.output_dir_var.get().strip()
-        if output_dir and os.path.isdir(output_dir):
+        if (output_dir and os.path.isdir(output_dir)):
             return os.path.join(output_dir, base_filename)
         return os.path.join(os.path.dirname(input_file), base_filename)
 
