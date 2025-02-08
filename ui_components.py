@@ -17,8 +17,8 @@ class TranscriberUI:
         ctk.set_appearance_mode("dark")
         ctk.set_default_color_theme("blue")
         self.window = TkinterDnD.Tk()
-        self.window.title("Video Transcriber")
-        self.window.geometry("700x600")
+        self.window.title("Noter")
+        self.window.geometry("700x760")
         self.window.grid_columnconfigure(0, weight=1)
         self.window.grid_rowconfigure(0, weight=1)
 
@@ -26,9 +26,24 @@ class TranscriberUI:
         self.main_frame = ctk.CTkFrame(self.window)
         self.main_frame.pack(fill="both", expand=True)
         
+        self.title_label = ctk.CTkLabel(
+            self.main_frame,
+            text="video transcriber and note generator",
+            font=("Arial", 24, "bold")
+        )
+        self.title_label.pack(pady=15)
+        
         self.create_top_frame()
         self.create_drop_zone()
-        self.create_progress_components()
+        
+        self.terminal_header = ctk.CTkLabel(
+            self.main_frame,
+            text="Transcription Progress Terminal",
+            font=("Arial", 14, "bold")
+        )
+        self.terminal_header.pack(pady=(15, 5))
+        
+        self.create_output_area()
 
     def create_top_frame(self):
         top_frame = ctk.CTkFrame(self.main_frame)
@@ -125,18 +140,28 @@ class TranscriberUI:
         self.drop_zone.drop_target_register(DND_FILES)
         self.drop_zone.dnd_bind('<<Drop>>', self.transcription_manager.handle_drop)
 
-    def create_progress_components(self):
-        self.progress_label = ctk.CTkLabel(self.main_frame, text="Progress: 0%")
-        self.progress_label.pack(pady=5)
-        
-        self.progress_bar = ctk.CTkProgressBar(
+    def create_output_area(self):
+        self.output_text = ctk.CTkTextbox(
             self.main_frame,
             width=600,
-            height=16,
-            corner_radius=6
+            height=200,
+            font=("Courier", 12),
+            fg_color="#171515",
+            text_color="white",
         )
-        self.progress_bar.pack(pady=5)
-        self.progress_bar.set(0)
+        self.output_text.pack(pady=10, padx=10)
+        self.output_text.configure(state="disabled")
+
+    def update_output(self, text):
+        """Update the output text area"""
+        def _update():
+            self.output_text.configure(state="normal")
+            self.output_text.insert("end", f"{text}\n")
+            self.output_text.see("end")
+            self.output_text.configure(state="disabled")
+        
+        # Schedule update in main thread
+        self.window.after(0, _update)
 
     def browse_output_dir(self):
         directory = filedialog.askdirectory(title="Select Output Directory")
@@ -146,9 +171,6 @@ class TranscriberUI:
     def update_status(self, text):
         self.status_label.configure(text=text)
 
-    def update_progress(self, value):
-        self.progress_bar.set(value / 100)
-        self.progress_label.configure(text=f"Progress: {value}%")
 
     def update_transcription_state(self, state):
         states = {
