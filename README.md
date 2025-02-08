@@ -11,6 +11,10 @@ A Python application that transcribes video files to text, generates subtitles, 
 - 🎯 Progress tracking and status indicators
 - 🎨 Dark mode interface
 
+<p align="center">
+  <img src="assets/img.png" alt="app screenshot" width="600">
+</p>
+
 ## Prerequisites & Disclamer
 
 The app is not tested yet on Linux/Unix based os.
